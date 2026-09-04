@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { transition: background 0.8s ease, color 0.8s ease; }
+    </style>
+</head>
+<body id="app-body" class="bg-gradient-to-br from-slate-900 to-slate-800 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+<!-- Container Principal -->
+<div class="w-full max-w-md bg-white/10 backdrop-blur-md p-6 rounded-3xl shadow-2xl border border-white/20 text-center">
+
+    <h1 class="text-xl font-medium tracking-wide opacity-80 mb-6">Previsão do Tempo</h1>
+
+    <!-- Campo de Busca -->
+    <div class="flex gap-2 mb-8">
+        <input
+                type="text"
+                id="cepInput"
+                placeholder="Digite o CEP (ex: 37750000)"
+                maxlength="8"
+                class="w-full px-4 py-3 rounded-2xl bg-white/10 placeholder-white/50 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/40 text-center text-lg"
+        >
+        <button
+                onclick="buscarClima()"
+                class="bg-white/20 hover:bg-white/30 px-5 py-3 rounded-2xl transition font-semibold flex items-center justify-center"
+        >
+            <i data-lucide="search"></i>
+        </button>
+    </div>
+
+    <!-- Mensagem de Carregando / Erro -->
+    <div id="statusMessage" class="hidden text-sm opacity-80 mb-4">Buscando dados...</div>
+
+    <!-- Bloco de Resultado (Escondido no início) -->
+    <div id="weatherCard" class="hidden flex-col items-center">
+
+        <i id="weatherIcon" data-lucide="cloud" class="w-20 h-20 mb-2"></i>
+
+        <h2 id="cidadeUf" class="text-3xl font-bold">--</h2>
+        <p id="condicaoTempo" class="text-lg opacity-80 mb-4">--</p>
+
+        <div class="text-6xl font-extrabold mb-6" id="temperatura">--°C</div>
+
+        <!-- Grid de Informações Secundárias -->
+        <div class="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/20">
+            <div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                <i data-lucide="droplets" class="w-6 h-6 opacity-75"></i>
+                <div class="text-left">
+                    <span class="text-xs opacity-60 block">Umidade</span>
+                    <span id="umidade" class="font-semibold text-lg">--%</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
+                <i data-lucide="wind" class="w-6 h-6 opacity-75"></i>
+                <div class="text-left">
+                    <span class="text-xs opacity-60 block">Vento</span>
+                    <span id="vento" class="font-semibold text-lg">-- km/h</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    const temasClima = {
+        "Céu limpo": {
+            dia: { bg: "from-amber-400 to-orange-500", icon: "sun" },
+            noite: { bg: "from-slate-900 via-indigo-950 to-blue-950", icon: "moon" }
+        },
+        "Parcialmente Nublado": {
+            dia: { bg: "from-sky-400 to-indigo-600", icon: "cloud-sun" },
+            noite: { bg: "from-slate-900 via-slate-800 to-indigo-950", icon: "cloud-moon" }
+        },
+        "Nublado": {
+            dia: { bg: "from-slate-600 to-slate-800", icon: "cloud" },
+            noite: { bg: "from-slate-950 to-slate-900", icon: "cloud" }
+        },
+        "Névoa / Ensolarado com Nevoeiro": {
+            dia: { bg: "from-teal-600 to-slate-700", icon: "cloud-fog" },
+            noite: { bg: "from-slate-900 to-teal-950", icon: "cloud-fog" }
+        },
+        "Garoa Fininha": {
+            dia: { bg: "from-blue-500 to-slate-700", icon: "cloud-drizzle" },
+            noite: { bg: "from-slate-900 to-blue-950", icon: "cloud-drizzle" }
+        },
+        "Chuva": {
+            dia: { bg: "from-blue-700 to-slate-900", icon: "cloud-rain" },
+            noite: { bg: "from-slate-950 via-blue-950 to-black", icon: "cloud-rain" }
+        },
+        "Pancadas de Chuva": {
+            dia: { bg: "from-indigo-700 to-slate-900", icon: "cloud-rain-wind" },
+            noite: { bg: "from-slate-950 via-indigo-950 to-black", icon: "cloud-rain-wind" }
+        },
+        "Tempestade": {
+            dia: { bg: "from-purple-900 via-slate-900 to-black", icon: "cloud-lightning" },
+            noite: { bg: "from-purple-950 via-slate-950 to-black", icon: "cloud-lightning" }
+        }
+    };
+
+    async function buscarClima() {
+        const cep = document.getElementById('cepInput').value.trim();
+        const statusMsg = document.getElementById('statusMessage');
+        const weatherCard = document.getElementById('weatherCard');
+
+        if (cep.length < 8) {
+            alert('Por favor, digite um CEP válido com 8 dígitos.');
+            return;
+        }
+
+        statusMsg.innerText = "Buscando informações...";
+        statusMsg.classList.remove('hidden');
+
+        try {
+            const response = await fetch(`http://localhost:8080/clima/${cep}`);
+
+            if (!response.ok) throw new Error('CEP não encontrado');
+
+            const data = await response.json();
+
+            document.getElementById('cidadeUf').innerText = `${data.cidade}, ${data.uf}`;
+            document.getElementById('condicaoTempo').innerText = data.condicaoTempo;
+            document.getElementById('temperatura').innerText = `${Math.round(data.temperatura)}°C`;
+            document.getElementById('umidade').innerText = `${data.umidade}%`;
+            document.getElementById('vento').innerText = `${data.velocidadeDoVento} km/h`;
+
+            aplicarTema(data.condicaoTempo);
+
+            statusMsg.classList.add('hidden');
+            weatherCard.classList.remove('hidden');
+            weatherCard.classList.add('flex');
+
+        } catch (error) {
+            statusMsg.innerText = "Erro ao buscar clima. Verifique o CEP informado.";
+        }
+    }
+
+    function aplicarTema(condicao) {
+        const body = document.getElementById('app-body');
+        const iconElement = document.getElementById('weatherIcon');
+
+        const horaAtual = new Date().getHours();
+
+        const ehNoite = horaAtual >= 18 || horaAtual < 6;
+
+        const condicaoTema = temasClima[condicao] || temasClima["Nublado"];
+
+        const tema = ehNoite ? condicaoTema.noite : condicaoTema.dia;
+
+        body.className = `bg-gradient-to-br ${tema.bg} text-white min-h-screen flex flex-col items-center justify-center p-4 transition-all duration-700`;
+
+        iconElement.setAttribute('data-lucide', tema.icon);
+        lucide.createIcons();
+    }
+</script>
+</body>
+</html>
