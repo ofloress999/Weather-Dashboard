@@ -41,9 +41,14 @@ public class ClimaService {
             System.err.println("Erro ao buscar CEP no ViaCep: " + e.getMessage());
         }
 
-        // Coordenadas padrão (fallback)
+        // Coordenadas padrão (fallback - Machado / Poços)
         String latitude = "-21.6811";
         String longitude = "-45.9231";
+
+        // Configuração de Headers padrão para APIs externas
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeatherApp/1.0");
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
         // 2. API NOMINATIM
         try {
@@ -53,10 +58,6 @@ public class ClimaService {
                     .queryParam("format", "json")
                     .queryParam("limit", "1")
                     .toUriString();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeatherApp/1.0");
-            HttpEntity<String> entity = new HttpEntity<>(headers);
 
             ResponseEntity<NominatimResponseDTO[]> responseNominatim = restTemplate.exchange(
                     urlNominatim,
@@ -82,7 +83,6 @@ public class ClimaService {
         String condicaoTempoReal = "Desconhecido";
 
         try {
-            // Garante uso de ponto nas coordenadas para nao quebrar a URL
             String latFormatted = latitude.replace(",", ".");
             String lonFormatted = longitude.replace(",", ".");
 
@@ -90,7 +90,14 @@ public class ClimaService {
                     + "&longitude=" + lonFormatted
                     + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
 
-            OpenMeteoResponseDTO openMeteoDTO = restTemplate.getForObject(urlOpenMeteo, OpenMeteoResponseDTO.class);
+            ResponseEntity<OpenMeteoResponseDTO> responseOpenMeteo = restTemplate.exchange(
+                    urlOpenMeteo,
+                    HttpMethod.GET,
+                    entity,
+                    OpenMeteoResponseDTO.class
+            );
+
+            OpenMeteoResponseDTO openMeteoDTO = responseOpenMeteo.getBody();
 
             if (openMeteoDTO != null && openMeteoDTO.getCurrent() != null) {
                 var current = openMeteoDTO.getCurrent();
@@ -101,11 +108,9 @@ public class ClimaService {
                 if (current.getWeathercode() != null) {
                     condicaoTempoReal = WmoCodeUtil.traduzirCodigo(current.getWeathercode());
                 }
-            } else {
-                System.err.println("OpenMeteo DTO ou atributo current veio nulo.");
             }
         } catch (Exception e) {
-            System.err.println("Erro ao buscar clima no OpenMeteo: " + e.getMessage());
+            System.err.println("Erro detalhado no OpenMeteo: " + e.getMessage());
             e.printStackTrace();
         }
 
