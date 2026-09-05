@@ -91,9 +91,11 @@ public class ClimaService {
             String latFormatted = latitude.replace(",", ".");
             String lonFormatted = longitude.replace(",", ".");
 
-            String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latFormatted
-                    + "&longitude=" + lonFormatted
-                    + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
+            String urlOpenMeteo = String.format(
+                    java.util.Locale.US,
+                    "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+                    latFormatted, lonFormatted
+            );
 
             ResponseEntity<OpenMeteoResponseDTO> responseOpenMeteo = restTemplate.exchange(
                     urlOpenMeteo,
