@@ -51,6 +51,7 @@ public class ClimaService {
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         // 2. API NOMINATIM
+        /*
         try {
             String queryBusca = nomeCidade + ", " + nomeUF + ", Brazil";
 
@@ -79,7 +80,7 @@ public class ClimaService {
             }
         } catch (Exception e) {
             System.err.println("Erro ao buscar coordenadas no Nominatim: " + e.getMessage());
-        }
+        } */
 
         // 3. API OpenMeteo
         BigDecimal temperaturaReal = new BigDecimal("0.0");
@@ -88,14 +89,9 @@ public class ClimaService {
         String condicaoTempoReal = "Desconhecido";
 
         try {
-            String latFormatted = latitude.replace(",", ".");
-            String lonFormatted = longitude.replace(",", ".");
-
-            String urlOpenMeteo = String.format(
-                    java.util.Locale.US,
-                    "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
-                    latFormatted, lonFormatted
-            );
+            String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude
+                    + "&longitude=" + longitude
+                    + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
 
             ResponseEntity<OpenMeteoResponseDTO> responseOpenMeteo = restTemplate.exchange(
                     urlOpenMeteo,
@@ -108,7 +104,6 @@ public class ClimaService {
 
             if (openMeteoDTO != null && openMeteoDTO.getCurrent() != null) {
                 var current = openMeteoDTO.getCurrent();
-
                 if (current.getTemperatura() != null) temperaturaReal = current.getTemperatura();
                 if (current.getVelocidadeDoVento() != null) velocidadeVentoReal = current.getVelocidadeDoVento();
                 if (current.getUmidade() != null) umidadeReal = current.getUmidade();
@@ -117,7 +112,7 @@ public class ClimaService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Erro detalhado no OpenMeteo: " + e.getMessage());
+            System.err.println("Erro na chamada da OpenMeteo: " + e.getMessage());
             e.printStackTrace();
         }
 
