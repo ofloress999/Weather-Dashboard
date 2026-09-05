@@ -47,20 +47,25 @@ public class ClimaService {
 
         // Configuração de Headers padrão para APIs externas
         HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeatherApp/1.0");
+        headers.set("User-Agent", "WeatherApp/1.0 (seu-email@dominio.com)"); // Mantenha um e-mail válido
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         // 2. API NOMINATIM
         try {
             String queryBusca = nomeCidade + ", " + nomeUF + ", Brazil";
-            String urlNominatim = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
+
+            java.net.URI uriNominatim = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
                     .queryParam("q", queryBusca)
                     .queryParam("format", "json")
                     .queryParam("limit", "1")
-                    .toUriString();
+                    .build()
+                    .encode()
+                    .toUri();
+
+            System.out.println("Chamando Nominatim: " + uriNominatim.toString());
 
             ResponseEntity<NominatimResponseDTO[]> responseNominatim = restTemplate.exchange(
-                    urlNominatim,
+                    uriNominatim,
                     HttpMethod.GET,
                     entity,
                     NominatimResponseDTO[].class
@@ -68,9 +73,9 @@ public class ClimaService {
 
             NominatimResponseDTO[] locais = responseNominatim.getBody();
 
-            if (locais != null && locais.length > 0 && locais[0].getLatitude() != null && locais[0].getLongitude() != null) {
-                latitude = locais[0].getLatitude();
-                longitude = locais[0].getLongitude();
+            if (locais != null && locais.length > 0) {
+                if (locais[0].getLatitude() != null) latitude = locais[0].getLatitude();
+                if (locais[0].getLongitude() != null) longitude = locais[0].getLongitude();
             }
         } catch (Exception e) {
             System.err.println("Erro ao buscar coordenadas no Nominatim: " + e.getMessage());
