@@ -91,7 +91,8 @@ public class ClimaService {
         try {
             String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude
                     + "&longitude=" + longitude
-                    + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
+                    + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
+                    + "&timezone=auto";;
 
             ResponseEntity<OpenMeteoResponseDTO> responseOpenMeteo = restTemplate.exchange(
                     urlOpenMeteo,

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CurrentDTO {
+
     @JsonProperty("temperature_2m")
     private BigDecimal temperatura;
 
