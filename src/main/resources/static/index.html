@@ -122,7 +122,7 @@
         statusMsg.classList.remove('hidden');
 
         try {
-            const response = await fetch(`http://localhost:8080/clima/${cep}`);
+            const response = await fetch(`/clima/${cep}`);
 
             if (!response.ok) throw new Error('CEP não encontrado');
 
