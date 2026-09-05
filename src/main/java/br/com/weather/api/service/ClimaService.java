@@ -82,8 +82,12 @@ public class ClimaService {
         String condicaoTempoReal = "Desconhecido";
 
         try {
-            String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude
-                    + "&longitude=" + longitude
+            // Garante uso de ponto nas coordenadas para nao quebrar a URL
+            String latFormatted = latitude.replace(",", ".");
+            String lonFormatted = longitude.replace(",", ".");
+
+            String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latFormatted
+                    + "&longitude=" + lonFormatted
                     + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
 
             OpenMeteoResponseDTO openMeteoDTO = restTemplate.getForObject(urlOpenMeteo, OpenMeteoResponseDTO.class);
@@ -97,9 +101,12 @@ public class ClimaService {
                 if (current.getWeathercode() != null) {
                     condicaoTempoReal = WmoCodeUtil.traduzirCodigo(current.getWeathercode());
                 }
+            } else {
+                System.err.println("OpenMeteo DTO ou atributo current veio nulo.");
             }
         } catch (Exception e) {
             System.err.println("Erro ao buscar clima no OpenMeteo: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return ClimaModel.builder()
