@@ -23,37 +23,41 @@ public class ClimaService {
 
     public ClimaModel obterClima(String cep) {
 
+        String nomeCidade = "Cidade Desconhecida";
+        String nomeUF = "";
+        String cepFormatado = cep;
+
         // 1. API VIA CEP
-        String urlViaCep = "https://viacep.com.br/ws/" + cep + "/json/";
-        ViaCepResponseDTO viaCepResponseDTO = restTemplate.getForObject(urlViaCep, ViaCepResponseDTO.class);
+        try {
+            String urlViaCep = "https://viacep.com.br/ws/" + cep.replaceAll("\\D", "") + "/json/";
+            ViaCepResponseDTO viaCepResponseDTO = restTemplate.getForObject(urlViaCep, ViaCepResponseDTO.class);
 
-        String nomeCidade = (viaCepResponseDTO != null && viaCepResponseDTO.getCidade() != null)
-                ? viaCepResponseDTO.getCidade()
-                : "Cidade Desconhecida";
+            if (viaCepResponseDTO != null) {
+                if (viaCepResponseDTO.getCidade() != null) nomeCidade = viaCepResponseDTO.getCidade();
+                if (viaCepResponseDTO.getUf() != null) nomeUF = viaCepResponseDTO.getUf();
+                if (viaCepResponseDTO.getCep() != null) cepFormatado = viaCepResponseDTO.getCep();
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar CEP no ViaCep: " + e.getMessage());
+        }
 
-        String nomeUF = (viaCepResponseDTO != null && viaCepResponseDTO.getUf() != null)
-                ? viaCepResponseDTO.getUf()
-                : "";
-
-        String cepFormatado = (viaCepResponseDTO != null && viaCepResponseDTO.getCep() != null)
-                ? viaCepResponseDTO.getCep()
-                : cep;
-
-        // 2. API NOMINATIM
-        String queryBusca = nomeCidade + ", " + nomeUF;
-        String urlNominatim = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
-                .queryParam("q", queryBusca)
-                .queryParam("format", "json")
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "WeatherApiService/1.0");
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
+        // Coordenadas padrão (fallback)
         String latitude = "-21.6811";
         String longitude = "-45.9231";
 
+        // 2. API NOMINATIM
         try {
+            String queryBusca = nomeCidade + ", " + nomeUF + ", Brazil";
+            String urlNominatim = UriComponentsBuilder.fromUriString("https://nominatim.openstreetmap.org/search")
+                    .queryParam("q", queryBusca)
+                    .queryParam("format", "json")
+                    .queryParam("limit", "1")
+                    .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeatherApp/1.0");
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
             ResponseEntity<NominatimResponseDTO[]> responseNominatim = restTemplate.exchange(
                     urlNominatim,
                     HttpMethod.GET,
@@ -71,36 +75,33 @@ public class ClimaService {
             System.err.println("Erro ao buscar coordenadas no Nominatim: " + e.getMessage());
         }
 
-        // 3. API OpenMeteo (usando o parâmetro moderno 'current')
-        String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude
-                + "&longitude=" + longitude
-                + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
-
-        OpenMeteoResponseDTO openMeteoDTO = restTemplate.getForObject(urlOpenMeteo, OpenMeteoResponseDTO.class);
-
+        // 3. API OpenMeteo
         BigDecimal temperaturaReal = new BigDecimal("0.0");
         Double velocidadeVentoReal = 0.0;
         Integer umidadeReal = 0;
         String condicaoTempoReal = "Desconhecido";
 
-        if (openMeteoDTO != null && openMeteoDTO.getCurrentDTO() != null) {
-            var current = openMeteoDTO.getCurrentDTO();
+        try {
+            String urlOpenMeteo = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude
+                    + "&longitude=" + longitude
+                    + "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code";
 
-            if (current.getTemperatura() != null) {
-                temperaturaReal = current.getTemperatura();
+            OpenMeteoResponseDTO openMeteoDTO = restTemplate.getForObject(urlOpenMeteo, OpenMeteoResponseDTO.class);
+
+            if (openMeteoDTO != null && openMeteoDTO.getCurrentDTO() != null) {
+                var current = openMeteoDTO.getCurrentDTO();
+
+                if (current.getTemperatura() != null) temperaturaReal = current.getTemperatura();
+                if (current.getVelocidadeDoVento() != null) velocidadeVentoReal = current.getVelocidadeDoVento();
+                if (current.getUmidade() != null) umidadeReal = current.getUmidade();
+                if (current.getWeathercode() != null) {
+                    condicaoTempoReal = WmoCodeUtil.traduzirCodigo(current.getWeathercode());
+                }
             }
-            if (current.getVelocidadeDoVento() != null) {
-                velocidadeVentoReal = current.getVelocidadeDoVento();
-            }
-            if (current.getUmidade() != null) {
-                umidadeReal = current.getUmidade();
-            }
-            if (current.getWeathercode() != null) {
-                condicaoTempoReal = WmoCodeUtil.traduzirCodigo(current.getWeathercode());
-            }
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar clima no OpenMeteo: " + e.getMessage());
         }
 
-        //Retorno final da entidade
         return ClimaModel.builder()
                 .cep(cepFormatado)
                 .cidade(nomeCidade)
