@@ -88,8 +88,8 @@ public class ClimaService {
 
             OpenMeteoResponseDTO openMeteoDTO = restTemplate.getForObject(urlOpenMeteo, OpenMeteoResponseDTO.class);
 
-            if (openMeteoDTO != null && openMeteoDTO.getCurrentDTO() != null) {
-                var current = openMeteoDTO.getCurrentDTO();
+            if (openMeteoDTO != null && openMeteoDTO.getCurrent() != null) {
+                var current = openMeteoDTO.getCurrent();
 
                 if (current.getTemperatura() != null) temperaturaReal = current.getTemperatura();
                 if (current.getVelocidadeDoVento() != null) velocidadeVentoReal = current.getVelocidadeDoVento();

@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class OpenMeteoResponseDTO {
     @JsonProperty("current")
-    private CurrentDTO currentDTO;
+    private CurrentDTO current;
 
 }
